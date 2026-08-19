@@ -1,0 +1,66 @@
+# Python
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# Django
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+local_settings.py
+secret_settings.py
+
+# Media files (عکس‌ها)
+**/media/
+media/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.webp
+*.mp4
+*.avi
+*.mov
+*.pdf
+*.doc
+*.docx
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.rej
+
+# Project specific - web/settings.py (مهم!)
+web/web/settings.py
+web/web/local_settings.py
+web/web/secret_settings.py
+
+# Apps migrations (اختیاری - اگه می‌خوای migrations هم نرن)
+# web/apps/*/migrations/*.py
+# !web/apps/*/migrations/__init__.py
