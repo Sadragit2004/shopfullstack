@@ -1,0 +1,6 @@
+/api/v1/products/
+/api/v1/products/15/
+/api/v1/categories/
+/api/v1/orders/
+/api/v1/orders/15/
+/api/v1/users/
