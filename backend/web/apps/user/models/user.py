@@ -7,7 +7,7 @@ from django.db import models
 
 class Gender(models.TextChoices):
     MALE = "male", "Male"
-    FEMALE = "female", "Female"
+    FEMALE = "female", "Femala"
 
 
 class User(AbstractBaseUser, PermissionsMixin):
