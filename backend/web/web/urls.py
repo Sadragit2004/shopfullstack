@@ -18,7 +18,9 @@ from django.contrib import admin
 from django.urls import path
 import web.settings as sett
 from django.conf.urls.static import static
+from django.urls import path,include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v1/',include('apps.user.urls'))
 ]+static(sett.MEDIA_URL,document_root = sett.MEDIA_ROOT)
