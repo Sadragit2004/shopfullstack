@@ -1,4 +1,5 @@
 import secrets
+
 from datetime import timedelta
 
 from django.utils import timezone
@@ -38,7 +39,25 @@ def create_user_secret(
         is_active=False,
     )
 
-    code = f"{secrets.randbelow(10 ** VERIFICATION_CODE_LENGTH):0{VERIFICATION_CODE_LENGTH}d}"
+    code = (
+        f"{secrets.randbelow(10 ** VERIFICATION_CODE_LENGTH):0{VERIFICATION_CODE_LENGTH}d}"
+    )
+
+    # ========================================================
+    # Development Debug
+    # ========================================================
+
+    print("=" * 60)
+    print("OTP CODE GENERATED")
+    print(f"User ID : {user.pk}")
+    print(f"Mobile  : {user.mobile_number}")
+    print(f"Code    : {code}")
+    print(f"Expires : {expiry_minutes} minute(s)")
+    print("=" * 60)
+
+    # ========================================================
+    # Create Secret
+    # ========================================================
 
     return UserSecret.objects.create(
         user=user,
@@ -61,10 +80,6 @@ def get_active_user_secret(
     """
     Return the latest active verification code
     belonging to the given user.
-
-    Returns:
-        UserSecret: Active verification code.
-        None: No active verification code exists.
     """
 
     return (
@@ -100,7 +115,7 @@ def deactivate_secret(
     secret: UserSecret,
 ) -> None:
     """
-    Deactivate a verification code.
+    Deactivate verification code.
     """
 
     if secret.is_active:

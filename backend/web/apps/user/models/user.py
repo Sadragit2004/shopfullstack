@@ -1,15 +1,16 @@
+
 # apps/user/models/user.py
 
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 
+from .managers import UserManager
 from .validation.user import check_mobile
 from .validation.user import check_nationcode
 
 
 class Gender(models.TextChoices):
-
     MALE = "male", "Male"
     FEMALE = "female", "Female"
 
@@ -75,15 +76,23 @@ class User(
         auto_now_add=True,
     )
 
+    objects = UserManager()
+
     USERNAME_FIELD = "mobile_number"
 
     REQUIRED_FIELDS = []
 
     class Meta:
         db_table = "users"
+
         verbose_name = "User"
+
         verbose_name_plural = "Users"
-        ordering = ["-created_at"]
+
+        ordering = [
+            "-created_at",
+        ]
 
     def __str__(self):
         return self.mobile_number
+
