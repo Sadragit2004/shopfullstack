@@ -5,15 +5,17 @@ from rest_framework.generics import (
 )
 from rest_framework.response import Response
 
-from apps.product.models.category import Category
-from apps.product.api.serializers.category.serializers import CategorySerializer
+from apps.product.models.feature_value import FeatureValue
+from apps.product.api.serializers.feature_value.serializers import (
+    FeatureValueSerializer,
+)
 from apps.core.api.response import success_response
 
 
-class CategoryListCreateView(ListCreateAPIView):
+class FeatureValueListCreateView(ListCreateAPIView):
 
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+    queryset = FeatureValue.objects.all()
+    serializer_class = FeatureValueSerializer
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -49,10 +51,10 @@ class CategoryListCreateView(ListCreateAPIView):
         )
 
 
-class CategoryDetailView(RetrieveUpdateDestroyAPIView):
+class FeatureValueDetailView(RetrieveUpdateDestroyAPIView):
 
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+    queryset = FeatureValue.objects.all()
+    serializer_class = FeatureValueSerializer
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

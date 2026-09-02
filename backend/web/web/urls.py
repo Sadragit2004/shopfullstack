@@ -23,6 +23,13 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/',include('apps.user.urls')),
+    # ===============
     path("api/v1/", include("apps.product.api.urls.brand.urls")),
+    path("api/v1/", include("apps.product.api.urls.category.urls")),
+    path("api/v1/", include("apps.product.api.urls.feature.urls")),
+    path("api/v1/", include("apps.product.api.urls.feature_value.urls")),
+    path("api/v1/", include("apps.product.api.urls.category_feature.urls")),
+
+    # ================
 
 ]+static(sett.MEDIA_URL,document_root = sett.MEDIA_ROOT)
