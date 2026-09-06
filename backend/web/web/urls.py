@@ -33,6 +33,12 @@ urlpatterns = [
     path("api/v1/", include("apps.product.api.urls.pricing_tier.urls")),
     path("api/v1/", include("apps.product.api.urls.product_feature.urls")),
     path("api/v1/", include("apps.product.api.urls.product_gallery.urls")),
+    path("api/v1/", include("apps.product.api.urls.product_sale.urls")),
+    path("api/v1/", include("apps.product.api.urls.product_variant.urls")),
+    path("api/v1/", include("apps.product.api.urls.product.urls")),
+    path("api/v1/", include("apps.product.api.urls.sale_type.urls")),
+    path("api/v1/", include("apps.product.api.urls.unit.urls")),
+    path("api/v1/", include("apps.product.api.urls.variant_feature.urls")),
 
     # ================
 

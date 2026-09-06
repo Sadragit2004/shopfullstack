@@ -1,8 +1,9 @@
 from django.db import models
+from .manager.brand.brand import BrandManager
 
 
 class Brand(models.Model):
-    
+
     name = models.CharField(
         max_length=150,
     )
@@ -35,6 +36,8 @@ class Brand(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+    objects = BrandManager()
 
     class Meta:
         db_table = "product_brands"

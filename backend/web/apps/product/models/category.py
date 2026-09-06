@@ -1,5 +1,5 @@
 from django.db import models
-
+from .manager.category.category import CategoryManager
 
 class CategoryStatus(models.TextChoices):
     PUBLISHED = "published", "Published"
@@ -67,6 +67,8 @@ class Category(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+    objects = CategoryManager()
 
     class Meta:
         db_table = "product_categories"
