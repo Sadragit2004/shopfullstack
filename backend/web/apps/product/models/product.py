@@ -1,5 +1,5 @@
 from django.db import models
-
+from .manager.product.product import ProductManager
 
 class ProductStatus(models.TextChoices):
     PUBLISHED = "published", "Published"
@@ -72,6 +72,9 @@ class Product(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
     )
+
+
+    objects = ProductManager()
 
     class Meta:
         db_table = "products"

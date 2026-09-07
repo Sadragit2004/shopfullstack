@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.product.models.category import Category
+from apps.product.models.product import Product
 
 
 class CategoryPopularSerializer(serializers.ModelSerializer):
@@ -40,9 +41,19 @@ class CategoryMegaMenuSerializer(serializers.ModelSerializer):
 
 
 class CategoryProductSerializer(serializers.ModelSerializer):
+    brand = serializers.StringRelatedField(
+        read_only=True,
+    )
+
     class Meta:
-        model = Category.products.rel.related_model
-        fields = "__all__"
+        model = Product
+        fields = (
+            "title",
+            "cover_image",
+            "slug",
+            "created_at",
+            "brand",
+        )
 
 
 class CategoryProductsSerializer(serializers.ModelSerializer):
