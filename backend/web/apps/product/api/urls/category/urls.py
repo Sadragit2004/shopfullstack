@@ -8,9 +8,10 @@ from apps.product.api.views.category.views import (
 from apps.product.api.views.category.public import (
     CategoryPopularView,
     CategoryMegaMenuView,
-    CategoryProductsView,
+
 )
 
+from apps.product.api.views.category.category_product_list import CategoryProductListView
 
 urlpatterns = [
     # ============================================================
@@ -45,9 +46,12 @@ urlpatterns = [
         name="category-mega-menu",
     ),
 
-    path(
-        "categories/products/",
-        CategoryProductsView.as_view(),
-        name="category-products",
+
+     path(
+        'categories/<slug:category_slug>/',
+        CategoryProductListView.as_view(),
+        name='category-products-filter'
     ),
+
+
 ]

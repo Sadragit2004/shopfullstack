@@ -358,7 +358,7 @@ class ProductSaleAdmin(admin.ModelAdmin):
             "fields": ("product", "variant")
         }),
         ("Sale Configuration", {
-            "fields": ("sale_type", "unit", "minimum_quantity", "maximum_quantity")
+            "fields": ("sale_type", "unit", "minimum_quantity", "maximum_quantity",'purchase_step')
         }),
         ("Pricing", {
             "fields": ("purchase_price", "selling_price")

@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count, Prefetch
+from django.db.models import Prefetch
 
 
 class CategoryManager(models.Manager):
@@ -11,7 +11,7 @@ class CategoryManager(models.Manager):
                 status="published",
             )
             .annotate(
-                product_count=Count(
+                product_count=models.Count(
                     "products",
                     distinct=True,
                 ),
@@ -23,16 +23,46 @@ class CategoryManager(models.Manager):
         )
 
     def mega_menu(self):
-        children_queryset = (
-            self.model._base_manager
+        """
+        دریافت ساختار مگا منو تا حداکثر 5 سطح.
+        """
+
+        queryset = (
+            self.get_queryset()
             .filter(
                 status="published",
             )
-            .order_by(
-                "title",
+            .order_by("title")
+        )
+
+        # Level 5
+        level_5 = queryset
+
+        # Level 4
+        level_4 = queryset.prefetch_related(
+            Prefetch(
+                "children",
+                queryset=level_5,
             )
         )
 
+        # Level 3
+        level_3 = queryset.prefetch_related(
+            Prefetch(
+                "children",
+                queryset=level_4,
+            )
+        )
+
+        # Level 2
+        level_2 = queryset.prefetch_related(
+            Prefetch(
+                "children",
+                queryset=level_3,
+            )
+        )
+
+        # Level 1
         return (
             self.get_queryset()
             .filter(
@@ -42,23 +72,8 @@ class CategoryManager(models.Manager):
             .prefetch_related(
                 Prefetch(
                     "children",
-                    queryset=children_queryset,
-                ),
+                    queryset=level_2,
+                )
             )
-            .order_by(
-                "title",
-            )
-        )
-
-    def products_by_slug(self, slug):
-        return (
-            self.get_queryset()
-            .filter(
-                status="published",
-                slug=slug,
-            )
-            .prefetch_related(
-                "products",
-            )
-            .first()
+            .order_by("title")
         )

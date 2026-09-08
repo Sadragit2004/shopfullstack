@@ -42,6 +42,14 @@ class ProductSale(models.Model):
         decimal_places=2,
     )
 
+    # ============================================================
+    # فیلد جدید: پله خرید
+    # ============================================================
+    purchase_step = models.PositiveIntegerField(
+        default=1,
+        help_text="تعداد پله‌ای که کاربر می‌تواند خرید کند (مثلاً 2 یعنی 2، 4، 6، 8، ...)"
+    )
+
     minimum_quantity = models.PositiveIntegerField(
         default=1,
     )
@@ -109,6 +117,13 @@ class ProductSale(models.Model):
                 ),
                 name="sale_purchase_price_gte_zero",
             ),
+            # ============================================================
+            # محدودیت برای purchase_step
+            # ============================================================
+            models.CheckConstraint(
+                condition=Q(purchase_step__gte=1),
+                name="sale_purchase_step_gte_one",
+            ),
         ]
 
     def clean(self):
@@ -120,6 +135,18 @@ class ProductSale(models.Model):
                 raise ValidationError(
                     "Selected variant does not belong to the selected product."
                 )
+
+        # اعتبارسنجی purchase_step
+        if self.purchase_step < 1:
+            raise ValidationError(
+                "Purchase step must be at least 1."
+            )
+
+        # اگه purchase_step بزرگتر از maximum_quantity باشه
+        if self.maximum_quantity and self.purchase_step > self.maximum_quantity:
+            raise ValidationError(
+                "Purchase step cannot be greater than maximum quantity."
+            )
 
     def __str__(self):
         return f"{self.product.title} - {self.sale_type.name}"

@@ -1,5 +1,6 @@
-
+# apps/product/api/serializers/product/serializers.py
 from rest_framework import serializers
+from django.db.models import Min, Max
 
 from apps.product.models.brand import Brand
 from apps.product.models.category import Category
@@ -246,6 +247,7 @@ class ProductDetailSaleSerializer(serializers.ModelSerializer):
             "sale_type",
             "unit",
             "selling_price",
+            "purchase_step",           # <-- اضافه شد
             "minimum_quantity",
             "maximum_quantity",
             "inventory",
@@ -331,6 +333,10 @@ class ProductRelatedProductSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    price = serializers.SerializerMethodField()
+    min_price = serializers.SerializerMethodField()
+    max_price = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
         fields = (
@@ -341,7 +347,38 @@ class ProductRelatedProductSerializer(serializers.ModelSerializer):
             "brand",
             "categories",
             "features",
+            "price",
+            "min_price",
+            "max_price",
         )
+
+    def get_price(self, obj):
+        """قیمت پیش‌فرض (اولین sale فعال)"""
+        first_sale = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).first()
+        return str(first_sale.selling_price) if first_sale else None
+
+    def get_min_price(self, obj):
+        """کمترین قیمت فروش محصول"""
+        min_price = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).aggregate(
+            min_price=Min('selling_price')
+        )['min_price']
+        return str(min_price) if min_price else None
+
+    def get_max_price(self, obj):
+        """بیشترین قیمت فروش محصول"""
+        max_price = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).aggregate(
+            max_price=Max('selling_price')
+        )['max_price']
+        return str(max_price) if max_price else None
 
 
 # ============================================================
@@ -386,6 +423,13 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     has_variants = serializers.SerializerMethodField()
 
+    # ============================================================
+    # قیمت‌های محصول
+    # ============================================================
+    price = serializers.SerializerMethodField()
+    min_price = serializers.SerializerMethodField()
+    max_price = serializers.SerializerMethodField()
+
     class Meta:
         model = Product
         fields = (
@@ -413,6 +457,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
             "related_products",
 
+            "price",
+            "min_price",
+            "max_price",
+
             "created_at",
             "updated_at",
         )
@@ -431,3 +479,30 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             variants.all()
         )
 
+    def get_price(self, obj):
+        """قیمت پیش‌فرض (اولین sale فعال)"""
+        first_sale = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).first()
+        return str(first_sale.selling_price) if first_sale else None
+
+    def get_min_price(self, obj):
+        """کمترین قیمت فروش محصول"""
+        min_price = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).aggregate(
+            min_price=Min('selling_price')
+        )['min_price']
+        return str(min_price) if min_price else None
+
+    def get_max_price(self, obj):
+        """بیشترین قیمت فروش محصول"""
+        max_price = obj.sales.filter(
+            is_active=True,
+            selling_price__gte=0
+        ).aggregate(
+            max_price=Max('selling_price')
+        )['max_price']
+        return str(max_price) if max_price else None
