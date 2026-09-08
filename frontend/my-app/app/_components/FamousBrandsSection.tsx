@@ -1,88 +1,42 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+
 import { Icon } from "./icons";
 
-interface Brand {
-  id: string;
-  name: string;
-  logo: string;
-  href: string;
-  color: string;
-}
+import {
+  getPopularBrands,
+  type Brand,
+} from "@/lib/api/brands";
 
-const BRANDS: Brand[] = [
-  {
-    id: "apple",
-    name: "اپل",
-    logo: "🍎",
-    href: "/brands/apple",
-    color: "from-gray-600 to-gray-800",
-  },
-  {
-    id: "samsung",
-    name: "سامسونگ",
-    logo: "📱",
-    href: "/brands/samsung",
-    color: "from-blue-600 to-blue-800",
-  },
-  {
-    id: "xiaomi",
-    name: "شیائومی",
-    logo: "⚡",
-    href: "/brands/xiaomi",
-    color: "from-orange-500 to-orange-700",
-  },
-  {
-    id: "asus",
-    name: "ایسوس",
-    logo: "💻",
-    href: "/brands/asus",
-    color: "from-indigo-600 to-indigo-800",
-  },
-  {
-    id: "lenovo",
-    name: "لنوو",
-    logo: "🖥️",
-    href: "/brands/lenovo",
-    color: "from-red-600 to-red-800",
-  },
-  {
-    id: "sony",
-    name: "سونی",
-    logo: "🎮",
-    href: "/brands/sony",
-    color: "from-emerald-600 to-emerald-800",
-  },
-  {
-    id: "nike",
-    name: "نایکی",
-    logo: "👟",
-    href: "/brands/nike",
-    color: "from-rose-600 to-rose-800",
-  },
-  {
-    id: "adidas",
-    name: "آدیداس",
-    logo: "👕",
-    href: "/brands/adidas",
-    color: "from-zinc-700 to-zinc-900",
-  },
-];
-
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function SectionHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="mb-5 flex items-end justify-between gap-3">
       <div>
-        <h2 className="text-[19px] font-bold text-stone-900 sm:text-[21px] dark:text-white">{title}</h2>
-        {subtitle && <p className="mt-1 text-[13.5px] text-stone-500 dark:text-stone-400">{subtitle}</p>}
+        <h2 className="text-[19px] font-bold text-stone-900 sm:text-[21px] dark:text-white">
+          {title}
+        </h2>
+
+        {subtitle && (
+          <p className="mt-1 text-[13.5px] text-stone-500 dark:text-stone-400">
+            {subtitle}
+          </p>
+        )}
       </div>
+
       <Link
         href="/brands"
         className="flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-teal-800 hover:underline dark:text-teal-400"
       >
         مشاهده همه
+
         <Icon.ArrowMore className="h-3.5 w-3.5 rtl:rotate-180" />
       </Link>
     </div>
@@ -90,27 +44,94 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
 }
 
 export default function FamousBrandsSection() {
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBrands = async () => {
+      try {
+        const data = await getPopularBrands();
+
+        if (!cancelled) {
+          setBrands(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Failed to load popular brands:",
+            error
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadBrands();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const shown = brands.slice(0, 8);
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 md:px-6">
-      <SectionHeader title="برندهای معروف" subtitle="محصولات اصل از بهترین برندها" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-8">
-        {BRANDS.map((brand) => (
-          <Link
-            key={brand.id}
-            href={brand.href}
-            className="group flex flex-col items-center gap-3 rounded-2xl border border-stone-100 bg-white px-4 py-5 text-center transition-all hover:-translate-y-1 hover:border-teal-200 hover:shadow-md hover:shadow-teal-900/5 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-teal-800"
-          >
-            <span
-              className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${brand.color} text-2xl text-white shadow-lg transition-transform group-hover:scale-110`}
+      <SectionHeader
+        title="برندهای معروف"
+        subtitle="محصولات اصل از بهترین برندها"
+      />
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-8">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[145px] animate-pulse rounded-2xl bg-stone-100 dark:bg-stone-900"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-8">
+          {shown.map((brand) => (
+            <Link
+              key={brand.slug}
+              href={`/brand/${brand.slug}`}
+              className="group flex flex-col items-center gap-3 rounded-2xl border border-stone-100 bg-white px-4 py-5 text-center transition-all hover:-translate-y-1 hover:border-teal-200 hover:shadow-md hover:shadow-teal-900/5 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-teal-800"
             >
-              {brand.logo}
-            </span>
-            <span className="text-[13px] font-medium text-stone-700 dark:text-stone-200">
-              {brand.name}
-            </span>
-          </Link>
-        ))}
-      </div>
+              <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-stone-100 shadow-lg transition-transform group-hover:scale-110 dark:bg-stone-800">
+                {brand.image ? (
+                  <img
+                    src={brand.image}
+                    alt={brand.title}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="text-xl font-bold text-stone-400 dark:text-stone-500">
+                    {brand.title.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </span>
+
+              <span className="text-[13px] font-medium text-stone-700 dark:text-stone-200">
+                {brand.title}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {!loading && brands.length === 0 && (
+        <div className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+          برندی برای نمایش وجود ندارد.
+        </div>
+      )}
     </section>
   );
 }

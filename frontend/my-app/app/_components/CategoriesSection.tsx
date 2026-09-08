@@ -1,17 +1,22 @@
+"use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { Icon } from "./icons";
 import { CATEGORY_ICON_MAP } from "./data";
 
-import { getPopularCategories } from "@/lib/api/categories";
+import {
+  getPopularCategories,
+  type Category,
+} from "@/lib/api/categories";
 
 function SectionHeader({
   title,
   subtitle,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
 }) {
   return (
     <div className="mb-5 flex items-end justify-between gap-3">
@@ -28,7 +33,7 @@ function SectionHeader({
       </div>
 
       <Link
-        href="/categories"
+        href="/"
         className="flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-teal-800 hover:underline dark:text-teal-400"
       >
         مشاهده همه
@@ -39,8 +44,40 @@ function SectionHeader({
   );
 }
 
-export default async function CategoriesSection() {
-  const categories = await getPopularCategories();
+export default function CategoriesSection() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCategories = async () => {
+      try {
+        const data = await getPopularCategories();
+
+        if (!cancelled) {
+          setCategories(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Failed to load popular categories:",
+            error
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const shown = categories.slice(0, 8);
 
@@ -51,28 +88,45 @@ export default async function CategoriesSection() {
         subtitle="هرچی نیاز داری، یک‌جا پیدا می‌کنی"
       />
 
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-8">
-        {shown.map((category) => {
-          const CatIcon =
-            CATEGORY_ICON_MAP[category.slug] || Icon.Grid;
+      {loading ? (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-8">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-[145px] animate-pulse rounded-2xl bg-stone-100 dark:bg-stone-900"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-8">
+          {shown.map((category) => {
+            const CatIcon =
+              CATEGORY_ICON_MAP[category.slug] ?? Icon.Grid;
 
-          return (
-            <Link
-              key={category.slug}
-              href={`/categories/${category.slug}`}
-              className="group flex flex-col items-center gap-2.5 rounded-2xl border border-stone-100 bg-white px-2 py-5 text-center transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md hover:shadow-teal-900/5 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-teal-800"
-            >
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700/10 text-teal-700 transition-colors group-hover:bg-teal-700 group-hover:text-white dark:bg-teal-400/10 dark:text-teal-300">
-                <CatIcon className="h-7 w-7" />
-              </span>
+            return (
+              <Link
+                key={category.slug}
+                href={`/${category.slug}`}
+                className="group flex flex-col items-center gap-2.5 rounded-2xl border border-stone-100 bg-white px-2 py-5 text-center transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md hover:shadow-teal-900/5 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-teal-800"
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700/10 text-teal-700 transition-colors group-hover:bg-teal-700 group-hover:text-white dark:bg-teal-400/10 dark:text-teal-300">
+                  <CatIcon className="h-7 w-7" />
+                </span>
 
-              <span className="text-[12.5px] font-medium leading-tight text-stone-700 dark:text-stone-200">
-                {category.title}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+                <span className="text-[12.5px] font-medium leading-tight text-stone-700 dark:text-stone-200">
+                  {category.title}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && categories.length === 0 && (
+        <div className="py-8 text-center text-sm text-stone-500 dark:text-stone-400">
+          دسته‌بندی‌ای برای نمایش وجود ندارد.
+        </div>
+      )}
     </section>
   );
 }
