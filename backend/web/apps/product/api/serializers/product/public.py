@@ -1,9 +1,10 @@
-# apps/product/api/serializers/product/serializers.py
 from rest_framework import serializers
+
 from django.db.models import Min, Max
 
 from apps.product.models.brand import Brand
 from apps.product.models.category import Category
+from apps.product.models.discount import ProductDiscount
 from apps.product.models.feature import Feature
 from apps.product.models.feature_value import FeatureValue
 from apps.product.models.inventory import Inventory
@@ -195,7 +196,7 @@ class ProductDetailInventorySerializer(serializers.ModelSerializer):
         )
 
     def get_is_available(self, obj):
-        return (
+        return bool(
             obj.is_active
             and obj.quantity > 0
         )
@@ -240,6 +241,8 @@ class ProductDetailSaleSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    is_available = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductSale
         fields = (
@@ -247,11 +250,44 @@ class ProductDetailSaleSerializer(serializers.ModelSerializer):
             "sale_type",
             "unit",
             "selling_price",
-            "purchase_step",           # <-- اضافه شد
+            "purchase_step",
             "minimum_quantity",
             "maximum_quantity",
             "inventory",
+            "is_available",
             "pricing_tiers",
+        )
+
+    def get_is_available(self, obj):
+        inventory = getattr(
+            obj,
+            "inventory",
+            None,
+        )
+
+        if inventory is None:
+            return True
+
+        return bool(
+            inventory.is_active
+            and inventory.quantity > 0
+        )
+
+
+# ============================================================
+# Product Discount
+# ============================================================
+
+class ProductDetailDiscountSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProductDiscount
+        fields = (
+            "id",
+            "name",
+            "percentage",
+            "starts_at",
+            "expires_at",
         )
 
 
@@ -271,6 +307,14 @@ class ProductDetailVariantSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    is_available = serializers.SerializerMethodField()
+
+    price = serializers.SerializerMethodField()
+
+    min_price = serializers.SerializerMethodField()
+
+    max_price = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductVariant
         fields = (
@@ -280,6 +324,68 @@ class ProductDetailVariantSerializer(serializers.ModelSerializer):
             "barcode",
             "features",
             "sales",
+            "is_available",
+            "price",
+            "min_price",
+            "max_price",
+        )
+
+    def get_is_available(self, obj):
+        sales = list(
+            obj.sales.all()
+        )
+
+        if not sales:
+            return False
+
+        return any(
+            sale.is_available
+            for sale in sales
+        )
+
+    def get_price(self, obj):
+        sales = [
+            sale
+            for sale in obj.sales.all()
+            if sale.selling_price is not None
+            and sale.selling_price >= 0
+        ]
+
+        if not sales:
+            return None
+
+        return str(
+            sales[0].selling_price
+        )
+
+    def get_min_price(self, obj):
+        prices = [
+            sale.selling_price
+            for sale in obj.sales.all()
+            if sale.selling_price is not None
+            and sale.selling_price >= 0
+        ]
+
+        if not prices:
+            return None
+
+        return str(
+            min(prices)
+        )
+
+    def get_max_price(self, obj):
+        prices = [
+            sale.selling_price
+            for sale in obj.sales.all()
+            if sale.selling_price is not None
+            and sale.selling_price >= 0
+        ]
+
+        if not prices:
+            return None
+
+        return str(
+            max(prices)
         )
 
 
@@ -292,7 +398,6 @@ class ProductDetailDirectSaleSerializer(
 ):
     """
     Sales belonging directly to Product.
-
     Used when a product does not require variants.
     """
 
@@ -334,7 +439,9 @@ class ProductRelatedProductSerializer(serializers.ModelSerializer):
     )
 
     price = serializers.SerializerMethodField()
+
     min_price = serializers.SerializerMethodField()
+
     max_price = serializers.SerializerMethodField()
 
     class Meta:
@@ -353,32 +460,45 @@ class ProductRelatedProductSerializer(serializers.ModelSerializer):
         )
 
     def get_price(self, obj):
-        """قیمت پیش‌فرض (اولین sale فعال)"""
         first_sale = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
+            variant__isnull=True,
         ).first()
-        return str(first_sale.selling_price) if first_sale else None
+
+        return (
+            str(first_sale.selling_price)
+            if first_sale
+            else None
+        )
 
     def get_min_price(self, obj):
-        """کمترین قیمت فروش محصول"""
         min_price = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
         ).aggregate(
-            min_price=Min('selling_price')
-        )['min_price']
-        return str(min_price) if min_price else None
+            min_price=Min("selling_price")
+        )["min_price"]
+
+        return (
+            str(min_price)
+            if min_price is not None
+            else None
+        )
 
     def get_max_price(self, obj):
-        """بیشترین قیمت فروش محصول"""
         max_price = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
         ).aggregate(
-            max_price=Max('selling_price')
-        )['max_price']
-        return str(max_price) if max_price else None
+            max_price=Max("selling_price")
+        )["max_price"]
+
+        return (
+            str(max_price)
+            if max_price is not None
+            else None
+        )
 
 
 # ============================================================
@@ -416,6 +536,12 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    discounts = ProductDetailDiscountSerializer(
+        source="active_discounts",
+        many=True,
+        read_only=True,
+    )
+
     related_products = ProductRelatedProductSerializer(
         many=True,
         read_only=True,
@@ -423,44 +549,37 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     has_variants = serializers.SerializerMethodField()
 
-    # ============================================================
-    # قیمت‌های محصول
-    # ============================================================
     price = serializers.SerializerMethodField()
+
     min_price = serializers.SerializerMethodField()
+
     max_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
+
         fields = (
             "id",
             "title",
             "slug",
             "status",
             "description",
-
             "brand",
             "categories",
-
             "cover_image",
             "gallery",
-
             "pdf",
             "video_file",
             "video_url",
-
             "features",
-
             "has_variants",
             "variants",
             "sales",
-
+            "discounts",
             "related_products",
-
             "price",
             "min_price",
             "max_price",
-
             "created_at",
             "updated_at",
         )
@@ -475,34 +594,134 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         if variants is None:
             return False
 
-        return bool(
-            variants.all()
-        )
+        return variants.exists()
 
     def get_price(self, obj):
-        """قیمت پیش‌فرض (اولین sale فعال)"""
+        """
+        قیمت پیش‌فرض محصول.
+
+        اگر محصول Variant داشته باشد،
+        قیمت از Variantها گرفته می‌شود.
+
+        در غیر این صورت Sale مستقیم محصول.
+        """
+
+        variants = list(
+            obj.variants.all()
+        )
+
+        if variants:
+
+            prices = []
+
+            for variant in variants:
+
+                for sale in variant.sales.all():
+
+                    if (
+                        sale.selling_price is not None
+                        and sale.selling_price >= 0
+                    ):
+                        prices.append(
+                            sale.selling_price
+                        )
+
+            if prices:
+                return str(
+                    min(prices)
+                )
+
+            return None
+
         first_sale = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
         ).first()
-        return str(first_sale.selling_price) if first_sale else None
+
+        return (
+            str(first_sale.selling_price)
+            if first_sale
+            else None
+        )
 
     def get_min_price(self, obj):
-        """کمترین قیمت فروش محصول"""
+        variants = list(
+            obj.variants.all()
+        )
+
+        if variants:
+
+            prices = []
+
+            for variant in variants:
+
+                for sale in variant.sales.all():
+
+                    if (
+                        sale.selling_price is not None
+                        and sale.selling_price >= 0
+                    ):
+                        prices.append(
+                            sale.selling_price
+                        )
+
+            if prices:
+                return str(
+                    min(prices)
+                )
+
+            return None
+
         min_price = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
         ).aggregate(
-            min_price=Min('selling_price')
-        )['min_price']
-        return str(min_price) if min_price else None
+            min_price=Min("selling_price")
+        )["min_price"]
+
+        return (
+            str(min_price)
+            if min_price is not None
+            else None
+        )
 
     def get_max_price(self, obj):
-        """بیشترین قیمت فروش محصول"""
+        variants = list(
+            obj.variants.all()
+        )
+
+        if variants:
+
+            prices = []
+
+            for variant in variants:
+
+                for sale in variant.sales.all():
+
+                    if (
+                        sale.selling_price is not None
+                        and sale.selling_price >= 0
+                    ):
+                        prices.append(
+                            sale.selling_price
+                        )
+
+            if prices:
+                return str(
+                    max(prices)
+                )
+
+            return None
+
         max_price = obj.sales.filter(
             is_active=True,
-            selling_price__gte=0
+            selling_price__gte=0,
         ).aggregate(
-            max_price=Max('selling_price')
-        )['max_price']
-        return str(max_price) if max_price else None
+            max_price=Max("selling_price")
+        )["max_price"]
+
+        return (
+            str(max_price)
+            if max_price is not None
+            else None
+        )

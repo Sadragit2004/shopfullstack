@@ -1,6 +1,7 @@
 from .brand import Brand
 from .category import Category, CategoryStatus
 from .category_feature import CategoryFeature
+from .discount import ProductDiscount
 from .feature import Feature, FeatureType
 from .feature_value import FeatureValue
 from .inventory import Inventory
@@ -13,6 +14,7 @@ from .product_variant import ProductVariant
 from .sale_type import SaleType
 from .unit import Unit
 from .variant_feature import VariantFeature
+from .coupon import UserDiscountCoupon
 
 
 __all__ = [
@@ -20,6 +22,7 @@ __all__ = [
     "Category",
     "CategoryStatus",
     "CategoryFeature",
+    "ProductDiscount",
     "Feature",
     "FeatureType",
     "FeatureValue",
@@ -34,4 +37,5 @@ __all__ = [
     "SaleType",
     "Unit",
     "VariantFeature",
+    "UserDiscountCoupon",
 ]

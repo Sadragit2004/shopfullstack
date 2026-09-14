@@ -1,6 +1,6 @@
-
 from django.db import models
 from django.db.models import Count, F, Prefetch, Q
+from django.utils import timezone
 
 
 class ProductManager(models.Manager):
@@ -16,15 +16,15 @@ class ProductManager(models.Manager):
         - Product Features
         - Variants
         - Variant Features
-        - Sales
-        - Inventory
-        - Pricing Tiers
+        - Variant Feature Values
+        - Variant Sales
+        - Variant Inventory
+        - Variant Pricing Tiers
+        - Direct Product Sales
+        - Direct Product Inventory
+        - Direct Product Pricing Tiers
+        - Active Product Discounts
         - Related Products
-
-        Related products are ranked by:
-        1. Shared FeatureValue
-        2. Shared Feature
-        3. Shared Category
         """
 
         from apps.product.models.category import Category
@@ -35,6 +35,13 @@ class ProductManager(models.Manager):
         from apps.product.models.product_variant import ProductVariant
         from apps.product.models.pricing_tier import PricingTier
         from apps.product.models.variant_feature import VariantFeature
+        from apps.product.models.discount import ProductDiscount
+
+        # ============================================================
+        # Current Time
+        # ============================================================
+
+        now = timezone.now()
 
         # ============================================================
         # Categories
@@ -120,13 +127,13 @@ class ProductManager(models.Manager):
                 "id",
                 "product_id",
                 "feature_id",
+                "custom_value",
+                "sort_order",
                 "feature__id",
                 "feature__name",
                 "feature__key",
                 "feature__type",
                 "feature__is_active",
-                "custom_value",
-                "sort_order",
             )
             .order_by(
                 "sort_order",
@@ -153,15 +160,15 @@ class ProductManager(models.Manager):
                 "id",
                 "variant_id",
                 "feature_id",
+                "created_at",
                 "feature__id",
                 "feature__name",
                 "feature__key",
                 "feature__type",
                 "feature__is_active",
-                "created_at",
             )
             .order_by(
-                "feature__id",
+                "feature_id",
                 "id",
             )
         )
@@ -190,7 +197,7 @@ class ProductManager(models.Manager):
         )
 
         # ============================================================
-        # Product Sales
+        # Sales
         # ============================================================
 
         sales_queryset = (
@@ -217,6 +224,7 @@ class ProductManager(models.Manager):
                 "unit_id",
                 "purchase_price",
                 "selling_price",
+                "purchase_step",
                 "minimum_quantity",
                 "maximum_quantity",
                 "is_active",
@@ -243,6 +251,31 @@ class ProductManager(models.Manager):
             )
             .order_by(
                 "id",
+            )
+        )
+
+        # ============================================================
+        # Active Product Discounts
+        # ============================================================
+
+        active_discounts_queryset = (
+            ProductDiscount.objects
+            .filter(
+                is_active=True,
+                starts_at__lte=now,
+                expires_at__gt=now,
+            )
+            .only(
+                "id",
+                "name",
+                "percentage",
+                "starts_at",
+                "expires_at",
+                "is_active",
+            )
+            .order_by(
+                "-percentage",
+                "-created_at",
             )
         )
 
@@ -293,25 +326,41 @@ class ProductManager(models.Manager):
                 "brand",
             )
             .prefetch_related(
+                # Categories
                 Prefetch(
                     "categories",
                     queryset=categories_queryset,
                 ),
+
+                # Gallery
                 Prefetch(
                     "gallery",
                     queryset=gallery_queryset,
                 ),
+
+                # Product Features
                 Prefetch(
                     "features",
                     queryset=product_features_queryset,
                 ),
+
+                # Variants
                 Prefetch(
                     "variants",
                     queryset=variants_queryset,
                 ),
+
+                # Direct Product Sales
                 Prefetch(
                     "sales",
                     queryset=sales_queryset,
+                ),
+
+                # Active Product Discounts
+                Prefetch(
+                    "discounts",
+                    queryset=active_discounts_queryset,
+                    to_attr="active_discounts",
                 ),
             )
             .only(
@@ -339,22 +388,25 @@ class ProductManager(models.Manager):
             .first()
         )
 
+        # ============================================================
+        # Product Not Found
+        # ============================================================
+
         if product is None:
             return None
 
         # ============================================================
         # Related Products
         # ============================================================
-        #
-        # We use the already loaded ProductFeature relations.
-        # No database model changes are required.
-        #
 
-        product_features = list(product.features.all())
+        product_features = list(
+            product.features.all()
+        )
 
         feature_ids = {
-            feature.feature_id
-            for feature in product_features
+            product_feature.feature_id
+            for product_feature in product_features
+            if product_feature.feature_id
         }
 
         feature_value_ids = set()
@@ -374,9 +426,9 @@ class ProductManager(models.Manager):
             )
         )
 
-        # ------------------------------------------------------------
-        # Build matching conditions
-        # ------------------------------------------------------------
+        # ============================================================
+        # Related Product Filter
+        # ============================================================
 
         related_filter = Q()
 
@@ -395,7 +447,12 @@ class ProductManager(models.Manager):
                 categories__id__in=category_ids,
             )
 
+        # ============================================================
+        # Related Products
+        # ============================================================
+
         if related_filter:
+
             related_products_queryset = (
                 self.get_queryset()
                 .filter(
@@ -450,12 +507,8 @@ class ProductManager(models.Manager):
                     "-created_at",
                 )[:8]
             )
+
         else:
-            # --------------------------------------------------------
-            # Fallback:
-            # If product has no Feature / Category,
-            # return latest published products.
-            # --------------------------------------------------------
 
             related_products_queryset = (
                 self.get_queryset()
@@ -483,13 +536,12 @@ class ProductManager(models.Manager):
                 )[:8]
             )
 
-        # ------------------------------------------------------------
-        # Attach to product
-        # ------------------------------------------------------------
+        # ============================================================
+        # Attach Related Products
+        # ============================================================
 
         product.related_products = list(
             related_products_queryset
         )
 
         return product
-
