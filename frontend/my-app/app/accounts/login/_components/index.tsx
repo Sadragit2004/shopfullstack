@@ -1,269 +1,184 @@
-// app/[locale]/accounts/login/_components/index.tsx
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { login } from '@/lib/api/accounts/auth';
-import Header from '@/app/_components/Header';
-import Footer from '@/app/_components/Footer';
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+
+import { login } from "@/lib/api/accounts/auth";
+
+import Header from "@/app/_components/Header";
+import Footer from "@/app/_components/Footer";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mobileNumber, setMobileNumber] = useState('');
+  const searchParams = useSearchParams();
+
+  const [mobileNumber, setMobileNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
   const [focused, setFocused] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleMenuClick = () => {
-    console.log('Menu clicked');
-  };
-
-  // فوکوس خودکار روی input
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // اعتبارسنجی شماره موبایل
-  const isValidMobile = (mobile: string): boolean => {
-    return /^09\d{9}$/.test(mobile);
-  };
+  function normalizeMobile(value: string) {
+    return value.replace(/\D/g, "").slice(0, 11);
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
 
-    if (!mobileNumber) {
-      setError('لطفا شماره موبایل خود را وارد کنید');
+    setError("");
+
+    const mobile = normalizeMobile(mobileNumber);
+
+    if (!/^09\d{9}$/.test(mobile)) {
+      setError("شماره موبایل را به‌صورت صحیح وارد کنید.");
       return;
     }
-
-    if (!isValidMobile(mobileNumber)) {
-      setError('شماره موبایل وارد شده معتبر نیست');
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      await login(mobileNumber);
-      router.push(`/accounts/verify?mobile=${mobileNumber}`);
-    } catch (err: any) {
-      setError(err.message || 'خطا در ارسال کد تایید');
+      setLoading(true);
+
+      await login(mobile);
+
+      /*
+       * مسیر مقصدی که کاربر قبل از ورود درخواست کرده بود.
+       *
+       * مثال:
+       * /order/checkout/123
+       */
+      const next = searchParams.get("next");
+
+      const verifyParams = new URLSearchParams();
+
+      verifyParams.set("mobile", mobile);
+
+      /*
+       * فقط مسیرهای داخلی سایت مجاز هستند.
+       * این کار جلوی open redirect را می‌گیرد.
+       */
+      if (
+        next &&
+        next.startsWith("/") &&
+        !next.startsWith("//")
+      ) {
+        verifyParams.set("next", next);
+      }
+
+      router.push(
+        `/accounts/verify?${verifyParams.toString()}`
+      );
+    } catch (err) {
+      console.error("Login error:", err);
+
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("ارسال کد تایید ناموفق بود.");
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  // فرمت شماره موبایل برای نمایش
-  const formatMobile = (value: string): string => {
-    // حذف کاراکترهای غیر عددی
-    const cleaned = value.replace(/\D/g, '');
-    return cleaned.slice(0, 11);
-  };
+  }
 
   return (
-    <>
-      <Header onMenuClick={handleMenuClick} />
+    <div
+      dir="rtl"
+      className="min-h-screen bg-white text-neutral-900"
+    >
+      <Header />
 
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center px-4 py-12">
+      <main className="flex min-h-[calc(100vh-160px)] items-center justify-center px-4 py-10 sm:px-6">
         <div className="w-full max-w-md">
-          {/* Card */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-900/5 dark:shadow-black/20 border border-slate-200/70 dark:border-slate-800/60 overflow-hidden">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.06)] sm:p-8">
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
+                ورود به حساب
+              </h1>
 
-            {/* Top Decoration */}
-            <div className="h-2 bg-gradient-to-r from-teal-500 via-teal-600 to-teal-700" />
+              <p className="mt-2 text-sm leading-6 text-neutral-500">
+                شماره موبایل خود را وارد کنید تا کد تایید برای شما ارسال شود.
+              </p>
+            </div>
 
-            <div className="p-8 sm:p-10">
-              {/* Logo & Title */}
-              <div className="flex flex-col items-center mb-10">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-teal-500/20 blur-2xl rounded-full" />
-                  <div className="relative w-20 h-20 bg-gradient-to-br from-teal-600 to-teal-800 rounded-3xl flex items-center justify-center text-white shadow-lg shadow-teal-700/30">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-5"
+            >
+              <div>
+                <label
+                  htmlFor="mobile"
+                  className="mb-2 block text-sm font-medium text-neutral-700"
+                >
+                  شماره موبایل
+                </label>
+
+                <div
+                  className={[
+                    "flex h-14 items-center rounded-2xl border bg-white px-4 transition-all",
+                    focused
+                      ? "border-neutral-900 ring-4 ring-neutral-900/5"
+                      : "border-neutral-200",
+                  ].join(" ")}
+                >
+                  <input
+                    ref={inputRef}
+                    id="mobile"
+                    type="tel"
+                    inputMode="numeric"
+                    dir="ltr"
+                    autoComplete="tel"
+                    value={mobileNumber}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    onChange={(e) =>
+                      setMobileNumber(
+                        normalizeMobile(e.target.value)
+                      )
+                    }
+                    placeholder="09123456789"
+                    className="w-full bg-transparent text-left text-base font-medium text-neutral-900 outline-none placeholder:text-neutral-300"
+                  />
                 </div>
-
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 mt-6 text-center">
-                  خوش آمدید 👋
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm text-center leading-relaxed">
-                  برای ورود یا ثبت‌نام، شماره موبایل خود را وارد کنید
-                </p>
               </div>
 
-              {/* Error Alert */}
               {error && (
-                <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/50 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold mt-0.5">
-                    !
-                  </div>
-                  <p className="text-red-700 dark:text-red-400 text-sm flex-1 leading-relaxed">
-                    {error}
-                  </p>
+                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-600">
+                  {error}
                 </div>
               )}
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label
-                    htmlFor="mobile"
-                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 text-right"
-                  >
-                    شماره موبایل
-                  </label>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex h-14 w-full items-center justify-center rounded-2xl bg-neutral-950 px-5 text-sm font-semibold text-white transition-all hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? (
+                  <span>در حال ارسال...</span>
+                ) : (
+                  <span>دریافت کد تایید</span>
+                )}
+              </button>
+            </form>
 
-                  <div
-                    className={`relative rounded-2xl border-2 transition-all duration-300 ${
-                      focused
-                        ? 'border-teal-500 dark:border-teal-500 shadow-lg shadow-teal-500/10'
-                        : 'border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                      <svg
-                        className={`w-5 h-5 transition-colors ${
-                          focused
-                            ? 'text-teal-600 dark:text-teal-400'
-                            : 'text-slate-400 dark:text-slate-500'
-                        }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-
-                    <input
-                      ref={inputRef}
-                      id="mobile"
-                      type="tel"
-                      inputMode="numeric"
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(formatMobile(e.target.value))}
-                      onFocus={() => setFocused(true)}
-                      onBlur={() => setFocused(false)}
-                      placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                      maxLength={11}
-                      dir="ltr"
-                      className="w-full bg-transparent rounded-2xl px-4 py-4 pr-12 text-slate-800 dark:text-slate-100 text-lg text-left placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Helper Text */}
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 text-right">
-                    کد تایید به این شماره ارسال خواهد شد
-                  </p>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={loading || mobileNumber.length !== 11}
-                  className="group relative w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 dark:from-teal-600 dark:to-teal-700 dark:hover:from-teal-500 dark:hover:to-teal-600 text-white py-4 rounded-2xl font-medium text-base transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-600/20 hover:shadow-xl hover:shadow-teal-600/30 overflow-hidden"
-                >
-                  <span className="relative flex items-center justify-center gap-2">
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <span>در حال ارسال...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>دریافت کد تایید</span>
-                        <svg
-                          className="w-5 h-5 transition-transform group-hover:-translate-x-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </>
-                    )}
-                  </span>
-                </button>
-              </form>
-
-              {/* Divider */}
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="px-4 bg-white dark:bg-slate-900 text-xs text-slate-400 dark:text-slate-500">
-                    یا
-                  </span>
-                </div>
-              </div>
-
-              {/* Register Link */}
-              <div className="text-center">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  حساب کاربری ندارید؟{' '}
-                  <Link
-                    href="/accounts/register"
-                    className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium transition-colors hover:underline"
-                  >
-                    ثبت‌نام کنید
-                  </Link>
-                </p>
-              </div>
+            <div className="mt-6 text-center">
+              <Link
+                href="/"
+                className="text-sm text-neutral-500 transition-colors hover:text-neutral-900"
+              >
+                بازگشت به صفحه اصلی
+              </Link>
             </div>
-
-            {/* Bottom Terms */}
-            <div className="px-8 pb-8">
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center leading-relaxed">
-                با ورود،{' '}
-                <Link
-                  href="/terms"
-                  className="text-teal-600 dark:text-teal-400 hover:underline"
-                >
-                  قوانین و مقررات
-                </Link>{' '}
-                و{' '}
-                <Link
-                  href="/privacy"
-                  className="text-teal-600 dark:text-teal-400 hover:underline"
-                >
-                  حریم خصوصی
-                </Link>{' '}
-                را می‌پذیرم
-              </p>
-            </div>
-          </div>
-
-          {/* Back to Home */}
-          <div className="text-center mt-8">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-            >
-              <svg className="w-4 h-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>بازگشت به صفحه اصلی</span>
-            </Link>
           </div>
         </div>
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }

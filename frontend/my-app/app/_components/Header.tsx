@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, {
@@ -37,6 +36,38 @@ import {
   type CartItem,
   getProductDiscountPercentage,
 } from "@/lib/api/products/shopcart";
+
+
+/* ============================================================
+   Location Icon (inline - fallback)
+============================================================ */
+
+function LocationIcon({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17.657 16.657L13.414 20.9a8 8 0 1111.314 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}
 
 /* ============================================================
    Theme Toggle
@@ -623,25 +654,7 @@ function UserButton() {
               }
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 transition-colors hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800/70"
             >
-              <svg
-                className="h-4 w-4 text-stone-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17.657 16.657L13.414 20.9a8 8 0 1111.314 0z"
-                />
-
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+              <LocationIcon className="h-4 w-4 text-stone-400" />
 
               <span>
                 آدرس‌های من
@@ -679,6 +692,10 @@ function UserButton() {
     </div>
   );
 }
+
+/* ============================================================
+   Address Button
+============================================================ */
 
 /* ============================================================
    Cart Dropdown
@@ -842,12 +859,6 @@ function CartDropdown() {
                       0
                   );
 
-                /**
-                 * قیمت قبل از تخفیف
-                 *
-                 * unit_price در shopcart
-                 * قیمت نهایی بعد از تخفیف است.
-                 */
                 const originalUnitPrice =
                   discountPercentage >
                     0 &&
@@ -988,7 +999,7 @@ function CartDropdown() {
               </div>
 
               <Link
-                href="/shopcart"
+                href="/shop-cart"
                 onClick={() =>
                   setMenuOpen(false)
                 }
@@ -1140,13 +1151,8 @@ export default function Header({
         <div className="mr-auto flex items-center gap-1.5 md:mr-0">
           <ThemeToggleButton className="hidden sm:flex" />
 
-          <button
-            type="button"
-            aria-label="علاقه‌مندی‌ها"
-            className="hidden h-10 w-10 items-center justify-center rounded-full text-stone-600 transition-colors hover:bg-stone-100 sm:flex dark:text-stone-300 dark:hover:bg-stone-800"
-          >
-            <Icon.Heart className="h-[18px] w-[18px]" />
-          </button>
+          {/* Address */}
+
 
           {/* User */}
 
