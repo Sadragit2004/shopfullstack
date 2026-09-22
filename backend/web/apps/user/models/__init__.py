@@ -7,3 +7,4 @@ from .wallet import *
 from .wallet_transaction import *
 from .profile import *
 from .role import *
+from .user_address import *

@@ -19,11 +19,18 @@ from django.urls import path
 import web.settings as sett
 from django.conf.urls.static import static
 from django.urls import path,include
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 
 urlpatterns = [
+
+    # ==========user============
     path('admin/', admin.site.urls),
     path('api/v1/',include('apps.user.urls')),
-    # ===============
+    # ======product=========
     path("api/v1/", include("apps.product.api.urls.brand.urls")),
     path("api/v1/", include("apps.product.api.urls.category.urls")),
     path("api/v1/", include("apps.product.api.urls.feature.urls")),
@@ -40,6 +47,14 @@ urlpatterns = [
     path("api/v1/", include("apps.product.api.urls.unit.urls")),
     path("api/v1/", include("apps.product.api.urls.variant_feature.urls")),
 
-    # ================
+    # =======order=========
+    path("api/v1/order/", include("apps.order.api.urls.urls")),
+    # =======peyment=============
+    path("api/v1/peyment/", include("apps.peyment.api.urls.urls",namespace='peyment')),
+    # =======
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
 
 ]+static(sett.MEDIA_URL,document_root = sett.MEDIA_ROOT)
